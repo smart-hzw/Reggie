@@ -1,0 +1,30 @@
+server:
+  port: 80
+
+spring:
+  mail:
+    host: smtp.163.com
+    username: hzw2510@163.com
+    password: BKPSEAOUPIONWXKH
+
+  application:
+    name: Reggie_managment
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://124.220.164.22:3306/reggie?serverTimezone=UTC
+      username: root
+      password: Hzw@2510662268
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    #??????????????????????????????????????
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: assign_id
+
+reggie:
+  path: D:\tmp_server\
+
