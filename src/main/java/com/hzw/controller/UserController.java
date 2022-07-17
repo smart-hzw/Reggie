@@ -8,6 +8,8 @@ import com.hzw.service.SendEmailToUserService;
 import com.hzw.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,16 +29,19 @@ public class UserController {
     @Autowired
     private SendEmailToUserService sendEmailToUserService;
 
-    @Autowired
-    private RedisTemplate redisTemplate;
+    //@Autowired
+    //private RedisTemplate redisTemplate;
 
     @Autowired
     private UserService userService;
+
     /**
      * 发送手机短信验证码
      * @param user
+     * @param request
      * @return
      */
+    @CachePut(value = "UserLogin",key = "#user.id")
     @PostMapping("/sendMsg")
     public R<String> sendMsg(@RequestBody User user, HttpServletRequest request){
         log.info("当前邮箱为：{}",user.getPhone());
@@ -55,12 +60,13 @@ public class UserController {
             request.getSession().setAttribute(userEmail,code);
 
             //将生成的验证码缓存到redis中，并且设置有效期为5分钟
-            redisTemplate.opsForValue().set(userEmail,code, 5,TimeUnit.MINUTES);
+            //redisTemplate.opsForValue().set(userEmail,code, 5,TimeUnit.MINUTES);
             return R.success("邮件发送成功");
         }
         return R.error("邮箱为空");
     }
 
+    @Cacheable(value = "UserLogin",key = "#map.get('code')",unless = "#result.data == null")
     @PostMapping("/login")
     public R<User> login(@RequestBody Map map, HttpSession session){
         log.info("用户登录信息为,{}",map);
@@ -69,8 +75,8 @@ public class UserController {
         //从session中获取验证码
         //String emailCode = (String) session.getAttribute(userEmail);
         //从redis中获取验证码
-        Object emailCode = redisTemplate.opsForValue().get(userEmail);
-        if (code.equals(emailCode) && emailCode!=null){
+        //Object emailCode = redisTemplate.opsForValue().get(userEmail);
+        //if (code.equals(emailCode) && emailCode!=null){
             //判断当前用户对应的用户是否为新用户，如果是新用户自动完成注册
             LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(User::getPhone,userEmail);
@@ -83,9 +89,9 @@ public class UserController {
             }
             session.setAttribute("user",user.getId());
             //如果用户登录成功，就可以删除redis中缓存的验证码
-            redisTemplate.delete(userEmail);
+            //redisTemplate.delete(userEmail);
             return R.success(user);
-        }
-        return R.error("登录失败");
+        //}
+        //return R.error("登录失败");
     }
 }
