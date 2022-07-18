@@ -28,7 +28,6 @@ public class Orders implements Serializable {
     //地址id
     private Long addressBookId;
 
-
     //下单时间
     private LocalDateTime orderTime;
 

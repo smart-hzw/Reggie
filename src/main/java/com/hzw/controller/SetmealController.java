@@ -12,6 +12,8 @@ import com.hzw.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,11 +33,24 @@ public class SetmealController {
     @Autowired
     private CategoryService categoryService;
 
+    @CacheEvict(value = "setmealCache",key = "#setmealDto.categoryId + '_' + #setmealDto.status")
     @PostMapping
     public R<String> save(@RequestBody SetmealDto setmealDto) {
         log.info("套餐信息：{}",setmealDto);
         setmealService.saveWithDish(setmealDto);
         return R.success("套餐新增成功");
+    }
+
+    /**
+     * 根据id查询套餐信息和对应的口味信息
+     * @param id
+     * @return
+     */
+    @GetMapping("/{id}")
+    public R<SetmealDto> get(@PathVariable Long id){
+        log.info("/setmeal/id:{}",id);
+        SetmealDto setmealDto = setmealService.getByIdWithDish(id);
+        return R.success(setmealDto);
     }
 
     @GetMapping("/page")
@@ -68,6 +83,14 @@ public class SetmealController {
         return R.success(setmealDtoPage);
     }
 
+    @CacheEvict(value = "setmealCache",key = "#setmealDto.categoryId + '_' + #setmealDto.status")
+    @PutMapping
+    public R<String> update(@RequestBody  SetmealDto setmealDto){
+        setmealService.updateWithDish(setmealDto);
+        return R.success("套餐修改成功");
+    }
+
+    @CacheEvict(value = "setmealCache",allEntries = true)
     @DeleteMapping
     public R<String> delete(@RequestParam List<Long> ids){
         log.info("接收到的参数为：{}",ids);
@@ -81,6 +104,7 @@ public class SetmealController {
      * @param ids
      * @return
      */
+    @CacheEvict(value = "setmealCache",allEntries = true)
     @PostMapping("/status/{status}")
     public R<String> status(@PathVariable int status, @RequestParam List<Long> ids){
         log.info("售卖修改状态信息：{},菜品id:{}",status,ids);
@@ -96,6 +120,7 @@ public class SetmealController {
      * @param setmeal
      * @return
      */
+    @Cacheable(value = "setmealCache",key = "#setmeal.categoryId + '_' + #setmeal.status")
     @GetMapping("/list")
     public R<List<Setmeal>> list(Setmeal setmeal){
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
@@ -106,6 +131,5 @@ public class SetmealController {
         List<Setmeal> setmealList = setmealService.list(queryWrapper);
         return R.success(setmealList);
     }
-
 
 }

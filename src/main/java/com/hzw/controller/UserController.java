@@ -8,8 +8,12 @@ import com.hzw.service.SendEmailToUserService;
 import com.hzw.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.util.Map;
@@ -29,6 +34,9 @@ public class UserController {
     @Autowired
     private SendEmailToUserService sendEmailToUserService;
 
+    @Resource
+    private RedisCacheManager RedisCacheManager;
+
     //@Autowired
     //private RedisTemplate redisTemplate;
 
@@ -38,17 +46,16 @@ public class UserController {
     /**
      * 发送手机短信验证码
      * @param user
-     * @param request
      * @return
      */
-    @CachePut(value = "UserLogin",key = "#user.id")
+    @CachePut(value = "UserLogin",key = "#user.phone")
     @PostMapping("/sendMsg")
-    public R<String> sendMsg(@RequestBody User user, HttpServletRequest request){
+    public R<String> sendMsg(@RequestBody User user){
         log.info("当前邮箱为：{}",user.getPhone());
-        //获取手机号
+        //获取邮箱地址
         String userEmail = user.getPhone();
 
-        //判断当前获取的手机号是否不为空
+        //判断当前获取的邮箱地址是否不为空
         if (!StringUtils.isEmpty(userEmail)){
             //生成随机6位验证码
             String code = ValidateCodeUtils.generateValidateCode(6).toString();
@@ -56,27 +63,25 @@ public class UserController {
             //调用邮件发送工具类
             sendEmailToUserService.sendEmail(userEmail,message);
 
-            //需要将生成的验证码保存Session
-            request.getSession().setAttribute(userEmail,code);
-
-            //将生成的验证码缓存到redis中，并且设置有效期为5分钟
-            //redisTemplate.opsForValue().set(userEmail,code, 5,TimeUnit.MINUTES);
-            return R.success("邮件发送成功");
+            return R.success(code);
         }
         return R.error("邮箱为空");
     }
 
-    @Cacheable(value = "UserLogin",key = "#map.get('code')",unless = "#result.data == null")
+    @CacheEvict(value = "UserLogin",key = "#map.get('phone')")
     @PostMapping("/login")
     public R<User> login(@RequestBody Map map, HttpSession session){
         log.info("用户登录信息为,{}",map);
         String userEmail = (String) map.get("phone");
         String code = (String) map.get("code");
-        //从session中获取验证码
-        //String emailCode = (String) session.getAttribute(userEmail);
         //从redis中获取验证码
-        //Object emailCode = redisTemplate.opsForValue().get(userEmail);
-        //if (code.equals(emailCode) && emailCode!=null){
+        Cache cache = RedisCacheManager.getCache("UserLogin");
+        Cache.ValueWrapper valueWrapper = cache.get(userEmail);
+        R r = (R) valueWrapper.get();
+        Object cacheCode = r.getData();
+        log.info("获取到的缓存为：{},..........,{}",cache.toString(),cacheCode);
+
+        if (code.equals(cacheCode) && cacheCode!=null){
             //判断当前用户对应的用户是否为新用户，如果是新用户自动完成注册
             LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(User::getPhone,userEmail);
@@ -88,10 +93,8 @@ public class UserController {
                 userService.save(user);
             }
             session.setAttribute("user",user.getId());
-            //如果用户登录成功，就可以删除redis中缓存的验证码
-            //redisTemplate.delete(userEmail);
             return R.success(user);
-        //}
-        //return R.error("登录失败");
+        }
+        return R.error("登录失败");
     }
 }

@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableTransactionManagement
 @EnableCaching
 public class ReggieQuickstartApplication {
-
 	public static void main(String[] args) {
 		SpringApplication.run(ReggieQuickstartApplication.class, args);
 		log.info("启动成功");

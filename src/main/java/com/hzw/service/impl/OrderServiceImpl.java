@@ -9,6 +9,7 @@ import com.hzw.mapper.OrderMapper;
 import com.hzw.mapper.UserMapper;
 import com.hzw.pojo.*;
 import com.hzw.service.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -84,10 +85,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         orders.setNumber(String.valueOf(orderId));
         orders.setConsignee(addressBook.getConsignee());
         orders.setPhone(addressBook.getPhone());
-        orders.setAddress(addressBook.getProvinceName()==null ? "" : addressBook.getProvinceName()+
-                          addressBook.getCityName()==null ? "" : addressBook.getCityName()+
-                          addressBook.getDistrictName()==null ? "" : addressBook.getDistrictName()+
-                          addressBook.getDetail()==null ? "" : addressBook.getDetail());
+        orders.setUserName(addressBook.getConsignee());
+        String address = (addressBook.getProvinceName()==null ? "" : addressBook.getProvinceName())+
+                (addressBook.getCityName()==null ? "" : addressBook.getCityName())+
+                (addressBook.getDistrictName()==null ? "" : addressBook.getDistrictName())+
+                (addressBook.getDetail()==null ? "" : addressBook.getDetail());
+
+        orders.setAddress(address);
         this.save(orders);
 
         //向明细表插入数据，多条数据

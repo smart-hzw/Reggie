@@ -1,6 +1,7 @@
 package com.hzw.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.hzw.pojo.DishDto;
 import com.hzw.pojo.Setmeal;
 import com.hzw.pojo.SetmealDto;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -12,4 +13,8 @@ public interface SetmealService extends IService<Setmeal> {
     public void saveWithDish(SetmealDto setmealDto);
 
     public void deleteWithDish(@RequestParam List<Long> ids);
+
+    SetmealDto getByIdWithDish(Long id);
+
+    void updateWithDish(SetmealDto setmealDto);
 }

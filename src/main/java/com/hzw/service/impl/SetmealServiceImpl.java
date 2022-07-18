@@ -10,6 +10,7 @@ import com.hzw.mapper.SetmealMapper;
 import com.hzw.pojo.*;
 import com.hzw.service.SetmealDishService;
 import com.hzw.service.SetmealService;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,5 +69,38 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
         setmealDishService.remove(queryWrapper);
     }
 
+    @Override
+    public SetmealDto getByIdWithDish(Long id) {
+        //获取套餐id
+        Setmeal setmeal = this.getById(id);
+        SetmealDto setmealDto = new SetmealDto();
+        BeanUtils.copyProperties(setmeal,setmealDto);
+        //根据套餐id查询套餐相关菜品
+        LambdaQueryWrapper<SetmealDish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SetmealDish::getSetmealId,setmeal.getId());
+        List<SetmealDish> setmealDishList = setmealDishService.list(queryWrapper);
+        setmealDto.setSetmealDishes(setmealDishList);
+        return setmealDto;
+    }
+
+    @Override
+    public void updateWithDish(SetmealDto setmealDto) {
+        //更新套餐表信息
+        this.updateById(setmealDto);
+
+        //清理当前套餐对应菜品数据--dish_falvor表的delete操作
+        LambdaQueryWrapper<SetmealDish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SetmealDish::getSetmealId,setmealDto.getId());
+        setmealDishService.remove(queryWrapper);
+
+        List<SetmealDish> setmealDishList = setmealDto.getSetmealDishes();
+        setmealDishList = setmealDishList.stream().map((item)->{
+            item.setSetmealId(setmealDto.getId());
+            return item;
+        }).collect(Collectors.toList());
+
+        //添加当前提交过来的菜品数据--setmeal_dish表的insert
+        setmealDishService.saveBatch(setmealDishList);
+    }
 
 }
