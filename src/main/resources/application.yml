@@ -2,6 +2,41 @@ server:
   port: 80
 
 spring:
+  shardingsphere:
+    datasource:
+      names:
+        master,slave
+      # 主数据源
+      master:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://124.220.164.22:3306/reggie?characterEncoding=utf-8
+        username: root
+        password: Hzw@2510662268
+      # 从数据源
+      slave:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/reggie?characterEncoding=utf-8
+        username: root
+        password: root
+    masterslave:
+      # 读写分离配置
+      load-balance-algorithm-type: round_robin
+      # 最终的数据源名称
+      name: dataSource
+      # 主库数据源名称
+      master-data-source-name: master
+      # 从库数据源名称列表，多个逗号分隔
+      slave-data-source-names: slave
+    props:
+      sql:
+        show: true #开启SQL显示，默认false
+  main:
+    allow-bean-definition-overriding: true
+
+
+
   cache:
     redis:
       time-to-live: 1800000
@@ -20,12 +55,12 @@ spring:
   application:
     name: Reggie_managment
 
-  datasource:
-    druid:
-      driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://124.220.164.22:3306/reggie?serverTimezone=UTC
-      username: root
-      password: Hzw@2510662268
+#  datasource:
+#    druid:
+#      driver-class-name: com.mysql.cj.jdbc.Driver
+#      url: jdbc:mysql://124.220.164.22:3306/reggie?serverTimezone=UTC
+#      username: root
+#      password: Hzw@2510662268
 
 mybatis-plus:
   configuration:
